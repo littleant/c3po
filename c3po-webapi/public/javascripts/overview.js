@@ -18,6 +18,24 @@ $(document).ready(
 				});
 			});
 
+			$('<span> </span>').appendTo($('#more'));
+
+			var addBubbleChartButton = $('<a href="#" class="green_button">Add Bubble Chart</a>')
+					.appendTo($('#more'));
+			addBubbleChartButton.click(function() {
+				$.ajax({
+					headers : {
+						Accept : "application/json; charset=utf-8",
+					},
+					type : 'GET',
+					url : '/c3po/properties',
+					timeout : 5000,
+					async : false,
+					success : function(oData) {
+						showBubbleChartPopup(oData);
+					}
+				});
+			});
 		});
 
 function showPopup(properties) {
@@ -50,6 +68,48 @@ function showPopup(properties) {
 	});
 };
 
+function showBubbleChartPopup(properties) {
+	$("#overlay").addClass('activeoverlay');
+
+	var popup = $('#filterpopup');
+	popup.children('.popupreason').text('Please select two properties');
+	var config = popup.children('.popupconfig');
+
+	var fieldset1 = $('<fieldset><legend>First Property</legend></fieldset>').appendTo(config);
+	var fieldset2 = $('<fieldset><legend>Second Property</legend></fieldset>').appendTo(config);
+
+	fieldset1.append($('<p><input type="radio" id="property1-select" checked name="bubble-property" value="property1" /><label for="property1-select">Use this property for the bubble sizes</label></p>'));
+	fieldset2.append($('<p><input type="radio" id="property2-select" name="bubble-property" value="property2" /><label for="property2-select">Use property for the bubble sizes</label></p>'));
+
+	var sel1 = $('<select>').appendTo(fieldset1);
+	$(sel1).append($('<option>').text("").attr('value', ''));
+	$.each(properties, function(i, value) {
+		$(sel1).append($('<option>').text(value).attr('value', value));
+	});
+
+	var sel2 = $('<select>').appendTo(fieldset2);
+	$(sel2).append($('<option>').text("").attr('value', ''));
+	$.each(properties, function(i, value) {
+		$(sel2).append($('<option>').text(value).attr('value', value));
+	});
+
+	popup.css({
+		'display' : 'block',
+		'z-index' : 11
+	});
+
+	$('.popupconfig select').change(function(event) {
+		$.ajax({
+			type : 'GET',
+			url : '/c3po/property?name=' + $(this).val(),
+			timeout : 5000,
+			success : function(oData) {
+				showBubbleOptions(event.target, oData.type);
+			}
+		});
+	});
+};
+
 function showOptions(type) {
 	if (type == "STRING" || type == "BOOL" || type == "DATE") {
 		var property = $('.popupconfig select').val();
@@ -76,6 +136,142 @@ function showOptions(type) {
 
 	} else {
 		showIntegerPropertyDialog('applyIntegerHistogramSelection()');
+	}
+}
+
+function showBubbleOptions(select, type) {
+	if (type != "STRING" && type != "BOOL" && type != "DATE") {
+		showIntegerPropertyBubbleChartInput(select);
+	} else {
+		// remove unused inputs and selects
+		var fieldset = $(select).closest('fieldset');
+		fieldset.find('select[class="algorithm"]').remove();
+		fieldset.find('input[name!="bubble-property"]').remove();
+
+		// try to draw bubble chart
+		applyBubbleChartSelection();
+	}
+}
+
+function showIntegerPropertyBubbleChartInput(select) {
+	var fieldset = $(select).closest('fieldset');
+	var algorithmSelection = $('<select class="algorithm"><option/><option value="fixed">fixed</option><option value="sturge">Sturge\'s</option><option value="sqrt">Square-root choice</option></select>');
+	fieldset.append(algorithmSelection);
+	
+	algorithmSelection.change(function(event) {
+		var fieldset = $(event.target).closest('fieldset');
+
+		// remove old inputs and selects
+		fieldset.find('input[name!="bubble-property"]').remove();
+
+		var val = $(this).val();
+		if (val == "") {
+			$(this).effect("highlight", {color:'#FF1400'} , "slow");
+		} else { 
+			if (val == "fixed") {
+				var binInput = $('<input type="text" placeholder="bin width" />');
+				fieldset.append(binInput);
+				binInput.change(function() {
+					// try to draw bubble chart
+					applyBubbleChartSelection();
+				});
+			}
+
+			// try to draw bubble chart
+			applyBubbleChartSelection();
+		}
+	});
+}
+
+function applyBubbleChartSelection() {
+	// are all inputs and selects chosen/filled?
+	var elements = $('.popupconfig select, .popupconfig input');
+	var foundEmptyValue = false;
+	for (var i = 0; i < elements.length; i++) {
+		if ($(elements[i]).val() == '') {
+			foundEmptyValue = true;
+			break;
+		}
+	}
+
+	// all values filled, draw chart
+	if (!foundEmptyValue) {
+		// gather data
+		var fieldsets = $('.popupconfig fieldset');
+		var fieldset1 = $(fieldsets[0]);
+		var fieldset2 = $(fieldsets[1]);
+
+		// first fieldset/property
+		var selects1 = fieldset1.find('select');
+		var inputs1 = fieldset1.find('input');
+
+		var property1 = $(selects1[0]).val();
+		var alg1 = $(selects1[1]).val();
+		var width1 = $(inputs1[1]).val();
+
+		// second fieldset/property
+		var selects2 = fieldset2.find('select');
+		var inputs2 = fieldset2.find('input');
+
+		var property2 = $(selects2[0]).val();
+		var alg2 = $(selects2[1]).val();
+		var width2 = $(inputs2[1]).val();
+
+		// this is the same for both properties
+		var bubbleProperty = $(inputs1[0]).val();
+
+		// create URL
+		var url = '/c3po/overview/graph?property1=' + property1 + '&property2=' + property2 + '&bubbleproperty=' + bubbleProperty;
+		if (alg1 != undefined) {
+			url += '&alg1=' + alg1;
+
+			if (width1 != undefined) {
+				url += '&width1=' + width1;
+			}
+		}
+
+		if (alg2 != undefined) {
+			url += '&alg2=' + alg2;
+
+			if (width2 != undefined) {
+				url += '&width2=' + width2;
+			}
+		}
+
+		hidePopupDialog();
+		startSpinner();
+		$.ajax({
+			type : 'GET',
+			url : url,
+			timeout : 5000,
+			success : function(oData) {
+				// TODO
+				var id = oData.property1 + "_versus_" + oData.property2;
+				var data = {};
+				data[id] = oData.values;
+				$('#' + id).remove(); // remove the old graph if exist
+				drawGraphs(data, oData.options);
+				stopSpinner();
+				//scroll to bottom of page.
+			},
+			error : function(event) {
+				// TODO: remove this function
+				console.log(event);
+
+				var id = "format_versus_validity";
+				var data = {};
+				// data cannot have strings as values.
+				// Therefore they are written into the labels and an index is used for the values!
+				data[id] = [[0, 1, 1236, "PDF (1)"], [0, 0, 1067, "PDF (0)"],
+					[1, 1, 100, "Docx (1)"], [1, 0, 800, "Docx (0)"],
+					[2, 1, 1176, "Exe (1)"], [2, 0, 610, "Exe (0)"],
+					[3, 1, 539, "MP3 (1)"], [3, 0, 864, "MP3 (0)"]];
+				$('#' + id).remove(); // remove the old graph if exist
+				drawGraphs(data, { diagramType: 'Bubble' });
+				stopSpinner();
+				//scroll to bottom of page.
+			}
+		});
 	}
 }
 
@@ -209,6 +405,17 @@ function getPieChart(ttl) {
 	return options;
 };
 
+function getBubbleChart(ttl) {
+	var options = {
+		title : ttl,
+		seriesDefaults: {
+			renderer: $.jqplot.BubbleRenderer
+		}
+	};
+
+	return options;
+}
+
 function prettifyTitle(title) {
 	title = title.replace(/_/g, " ");
 	return title.replace(/\w\S*/g, function(txt) {
@@ -261,7 +468,12 @@ function drawGraphs(data, options) {
 						window.location = '/c3po/overview';
 					});
 				});
-		$.jqplot(i, [ d ], getBarChart(prettifyTitle(i)));
+		if (options != undefined && options['diagramType'] == 'Bubble') {
+			$.jqplot(i, [ d ], getBubbleChart(prettifyTitle(i)));
+		} else {
+			// bar chart is the default chart
+			$.jqplot(i, [ d ], getBarChart(prettifyTitle(i)));
+		}
 
 		if (idx == 0) {
 			idx++; // if first row skip the right and go to next row...

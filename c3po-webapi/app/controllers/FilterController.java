@@ -337,7 +337,7 @@ public class FilterController extends Controller {
     if (p.getType().equals(PropertyType.INTEGER.toString())) {
       calculateNumericHistogramResults(output, keys, values, width);
     } else {
-     calculateHistogramResults(output, keys, values);
+      calculateHistogramResults(output, keys, values);
     }
     
     result.sort();
