@@ -1,6 +1,7 @@
 package controllers;
 
 import helpers.Graph;
+import helpers.BasicGraph;
 import helpers.GraphData;
 import helpers.Statistics;
 
@@ -66,7 +67,7 @@ public class Overview extends Controller {
       }
     }
 
-    Graph g = FilterController.getGraph(property);
+    BasicGraph g = FilterController.getGraph(property);
 
     return ok(play.libs.Json.toJson(g));
   }

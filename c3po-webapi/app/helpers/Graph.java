@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public class Graph {
+public class Graph implements BasicGraph {
 
   private String property;
   private Map<String, String> options;

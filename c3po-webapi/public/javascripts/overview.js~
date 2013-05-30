@@ -246,7 +246,7 @@ function applyBubbleChartSelection() {
 			timeout : 5000,
 			success : function(oData) {
 				// TODO
-				var id = oData.property;
+				var id = oData.property1 + "_versus_" + oData.property2;
 				var data = {};
 				data[id] = oData.values;
 				$('#' + id).remove(); // remove the old graph if exist

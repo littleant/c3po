@@ -1,6 +1,8 @@
 package controllers;
 
+import helpers.BasicGraph;
 import helpers.Graph;
+import helpers.BubbleGraph;
 import helpers.PropertyValuesFilter;
 import helpers.Statistics;
 
@@ -254,17 +256,40 @@ public class FilterController extends Controller {
     return f;
   }
 
-  public static Graph getGraph(String property) {
+  public static BasicGraph getGraph(String property) {
     Filter filter = Application.getFilterFromSession();
 
     DynamicForm form = form().bindFromRequest();
     String alg = form.get("alg");
-    Graph g = null;
-
-    if (alg == null) {
-      g = getOrdinalGraph(filter, property);
+    BasicGraph g = null;
+    String bubbleProperty = form.get("bubbleproperty");
+    
+    if (bubbleProperty == null) {
+	    if (alg == null) {
+	      g = getOrdinalGraph(filter, property);
+	    } else {
+	      g = getNumericGraph(filter, property, form.get("alg"), form.get("width"));
+	    }
     } else {
-      g = getNumericGraph(filter, property, form.get("alg"), form.get("width"));
+    	Graph g1 = null;
+    	Graph g2 = null;
+    	
+    	String alg1 = form.get("alg1");
+    	if (alg1 == null) {
+    		g1 = getOrdinalGraph(filter, form.get("property1"));
+    	} else {
+  	      	g1 = getNumericGraph(filter, form.get("property1"), alg1, form.get("width1"));
+    	}
+    	
+    	String alg2 = form.get("alg2");
+    	if (alg2 == null) {
+    		g2 = getOrdinalGraph(filter, form.get("property2"));
+    	} else {
+    		g2 = getNumericGraph(filter, form.get("property2"), alg2, form.get("width2"));
+    	}
+    	
+    	// join g1 and g2 together to g
+    	g = joinGraphs(g1, g2);
     }
 
     if (g != null) {
@@ -276,7 +301,32 @@ public class FilterController extends Controller {
     }
     return g;
   }
-
+  
+  /**
+   * Joins two Graphs to a BubbleGraph
+   */
+  public static BasicGraph joinGraphs(Graph g1, Graph g2) {
+	  final String property = g1.getProperty() +"_versus_"+ g2.getProperty();
+	  final List<Double[]> keys = new ArrayList<Double[]>();
+	  final List<Object[]> values = new ArrayList<Object[]>();
+	  final BubbleGraph g = new BubbleGraph(property, keys, values);
+	  
+	  for (int i = 0; i < g1.getKeys().size(); i++) {
+		  for (int j = 0; j < g2.getKeys().size(); j++) {
+			  // add keys
+			  Double[] key = {(double) i, (double) j};
+			  keys.add(key);
+			  
+			  // add values
+			  // FIXME: 5 should be a value
+			  Object[] value = {(double) i, (double) j, Double.parseDouble(g1.getValues().get(i)) * Double.parseDouble(g2.getValues().get(j)), g1.getKeys().get(i) +" (# of "+ g2.getKeys().get(j) +")"};
+			  values.add(value);
+		  }
+	  }
+	  
+	  return g;
+  }
+  
   public static Graph getGraph(String collection, String property) {
     final PersistenceLayer p = Configurator.getDefaultConfigurator().getPersistence();
     final List<String> keys = new ArrayList<String>();
