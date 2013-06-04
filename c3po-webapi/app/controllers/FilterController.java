@@ -290,6 +290,11 @@ public class FilterController extends Controller {
     	
     	// join g1 and g2 together to g
     	g = joinGraphs(g1, g2);
+    	
+    	if (g != null) {
+    		g.sort();
+        	g.cutLongTail();
+    	}
     }
 
     if (g != null) {
@@ -318,7 +323,6 @@ public class FilterController extends Controller {
 			  keys.add(key);
 			  
 			  // add values
-			  // FIXME: 5 should be a value
 			  Object[] value = {(double) i, (double) j, Double.parseDouble(g1.getValues().get(i)) * Double.parseDouble(g2.getValues().get(j)), g1.getKeys().get(i) +" (# of "+ g2.getKeys().get(j) +")"};
 			  values.add(value);
 		  }

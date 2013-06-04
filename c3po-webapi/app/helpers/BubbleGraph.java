@@ -103,36 +103,28 @@ public class BubbleGraph implements BasicGraph {
   }
   
   public void cutLongTail() {
-	  // FIXME
-//    List<String> k = new ArrayList<String>();
-//    List<String> v = new ArrayList<String>();
-//    
-//    double sum = 0D;
-//    double rest = 0D;
-//    
-//    for (String s : values) {
-//      sum += Double.parseDouble(s);
-//    }
-//    
-//    int cut = (int)(sum * 0.005);
-//    
-//    for (int i = 0; i < values.size(); i++) {
-//      double tmp = Double.parseDouble(values.get(i));
-//      if (tmp > cut) {
-//        k.add(keys.get(i));
-//        v.add(values.get(i));
-//      } else {
-//        rest += tmp;
-//      }
-//    }
-//    
-//    if (rest > 0) {
-//    k.add("Rest");
-//    v.add("" + rest);
-//    }
-//    
-//    this.keys = k;
-//    this.values = v;
+	// TODO: show the "rest" instead of just removing it!
+    List<Double[]> k = new ArrayList<Double[]>();
+    List<Object[]> v = new ArrayList<Object[]>();
+        
+    double sum = 0D;
+    
+    for (Object[] value : this.values) {
+      sum += (Double) value[2];
+    }
+    
+    int cut = (int)(sum * 0.005);
+    
+    for (int i = 0; i < this.values.size(); i++) {
+      Double tmp = (Double) values.get(i)[2];
+      if (tmp > cut) {
+        k.add(keys.get(i));
+        v.add(values.get(i));
+      }
+    }
+    
+    this.keys = k;
+    this.values = v;
   }
 
   public Map<String, String> getOptions() {
