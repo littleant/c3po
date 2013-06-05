@@ -502,7 +502,7 @@ function drawGraphs(data, options) {
 						y = plot.axes.yaxis.u2p(data[1]);  // convert y axis units to pixels
 					var color = 'rgb(50%,50%,100%)';
 					$('#tooltip'+ i).css({left:chart_left+x+radius+5, top:chart_top+y});
-					$('#tooltip'+ i).html('<span style="font-size:14px;font-weight:bold;color:' + color + ';">' + data[3] + '</span><br /># of files: ' + data[2]);
+					$('#tooltip'+ i).html('<span style="font-size:14px;font-weight:bold;color:' + color + ';">' + data[3] + '</span><br />' + data[2] + ' files');
 					$('#tooltip'+ i).show();
 				});
 

@@ -347,7 +347,7 @@ public class FilterController extends Controller {
 			  
 			  // add values
 			  Double r = rValues.get(rKeys.get(j));
-			  Object[] value = {(double) i, (double) j, r, g1.getKeys().get(i) +" (# of "+ rKeys.get(j) +")"};
+			  Object[] value = {(double) i, (double) j, r, g1.getKeys().get(i) +" ("+ rKeys.get(j) +")"};
 			  values.add(value);
 		  }
 		  
