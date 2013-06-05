@@ -78,9 +78,6 @@ function showBubbleChartPopup(properties) {
 	var fieldset1 = $('<fieldset><legend>First Property</legend></fieldset>').appendTo(config);
 	var fieldset2 = $('<fieldset><legend>Second Property</legend></fieldset>').appendTo(config);
 
-	fieldset1.append($('<p><input type="radio" id="property1-select" checked name="bubble-property" value="property1" /><label for="property1-select">Use this property for the bubble sizes</label></p>'));
-	fieldset2.append($('<p><input type="radio" id="property2-select" name="bubble-property" value="property2" /><label for="property2-select">Use property for the bubble sizes</label></p>'));
-
 	var sel1 = $('<select>').appendTo(fieldset1);
 	$(sel1).append($('<option>').text("").attr('value', ''));
 	$.each(properties, function(i, value) {
@@ -146,7 +143,7 @@ function showBubbleOptions(select, type) {
 		// remove unused inputs and selects
 		var fieldset = $(select).closest('fieldset');
 		fieldset.find('select[class="algorithm"]').remove();
-		fieldset.find('input[name!="bubble-property"]').remove();
+		fieldset.find('input').remove();
 
 		// try to draw bubble chart
 		applyBubbleChartSelection();
@@ -162,7 +159,7 @@ function showIntegerPropertyBubbleChartInput(select) {
 		var fieldset = $(event.target).closest('fieldset');
 
 		// remove old inputs and selects
-		fieldset.find('input[name!="bubble-property"]').remove();
+		fieldset.find('input').remove();
 
 		var val = $(this).val();
 		if (val == "") {
@@ -217,11 +214,8 @@ function applyBubbleChartSelection() {
 		var alg2 = $(selects2[1]).val();
 		var width2 = $(inputs2[1]).val();
 
-		// this is the same for both properties
-		var bubbleProperty = $(inputs1[0]).val();
-
 		// create URL
-		var url = '/c3po/overview/graph?property=&property1=' + property1 + '&property2=' + property2 + '&bubbleproperty=' + bubbleProperty;
+		var url = '/c3po/overview/graph?property=&property1=' + property1 + '&property2=' + property2;
 		if (alg1 != undefined) {
 			url += '&alg1=' + alg1;
 
@@ -245,29 +239,11 @@ function applyBubbleChartSelection() {
 			url : url,
 			timeout : 5000,
 			success : function(oData) {
-				// TODO
-				var id = oData.property1 + "_versus_" + oData.property2;
+				var id = oData.property;
 				var data = {};
 				data[id] = oData.values;
 				$('#' + id).remove(); // remove the old graph if exist
 				drawGraphs(data, oData.options);
-				stopSpinner();
-				//scroll to bottom of page.
-			},
-			error : function(event) {
-				// TODO: remove this function
-				console.log(event);
-
-				var id = "format_versus_validity";
-				var data = {};
-				// data cannot have strings as values.
-				// Therefore they are written into the labels and an index is used for the values!
-				data[id] = [[0, 1, 1236, "PDF (1)"], [0, 0, 1067, "PDF (0)"],
-					[1, 1, 100, "Docx (1)"], [1, 0, 800, "Docx (0)"],
-					[2, 1, 1176, "Exe (1)"], [2, 0, 610, "Exe (0)"],
-					[3, 1, 539, "MP3 (1)"], [3, 0, 864, "MP3 (0)"]];
-				$('#' + id).remove(); // remove the old graph if exist
-				drawGraphs(data, { diagramType: 'Bubble' });
 				stopSpinner();
 				//scroll to bottom of page.
 			}
@@ -409,7 +385,20 @@ function getBubbleChart(ttl) {
 	var options = {
 		title : ttl,
 		seriesDefaults: {
-			renderer: $.jqplot.BubbleRenderer
+			renderer: $.jqplot.BubbleRenderer,
+			rendererOptions: {
+				showLabels: false
+			}
+		},
+		axes: {
+			xaxis: {
+				label: ttl.substring(0, ttl.indexOf('Versus') - 1),
+				labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+			},
+			yaxis: {
+				label: ttl.substring(ttl.indexOf('Versus') + 7),
+				labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+			}
 		}
 	};
 
@@ -448,28 +437,81 @@ function drawGraphs(data, options) {
 				'jqplotDataClick',
 				function(ev, seriesIndex, pointIndex, data) {
 					startSpinner();
-					var url = '/c3po/filter?filter=' + i + '&value='
-							+ pointIndex + '&type=graph';
 
-					if (options) {
-						var type = options['type'];
-						var alg = options['alg'];
-						var width = options['width'];
+					var versusLocation = i.indexOf('_versus_');
+					if (versusLocation != -1) {
+						// it's a bubble chart we have two filters
+						var url1 = '/c3po/filter?filter='+ i.substring(0, versusLocation) +'&value='+ data[0] +'&type=graph';
+						// TODO: append options
+console.log(options);
+						// fix value if there are missing bubbles for the property
+						var fixedValue = data[1];
+						for (var j = 0; j < data[1]; j++) {
+							if (seriesIndex - j < 0) {
+								fixedValue--;
+								continue;
+							}
 
-						if (type == 'INTEGER') {
-							url += '&alg=' + alg;
-
-							if (width) {
-								url += '&width=' + width;
+							if (d[seriesIndex - j][0] != data[0]) {
+								// different property
+								fixedValue--;
 							}
 						}
+						var url2 = '/c3po/filter?filter='+ i.substring(versusLocation + 8) +'&value='+ fixedValue +'&type=graph';
+						// TODO: append options
+
+						$.post(url1, function(data) {
+							$.post(url2, function(data) {
+								window.location = '/c3po/overview';
+							});
+						});
+					} else {
+						var url = '/c3po/filter?filter=' + i + '&value='
+								+ pointIndex + '&type=graph';
+						if (options) {
+							var type = options['type'];
+							var alg = options['alg'];
+							var width = options['width'];
+
+							if (type == 'INTEGER') {
+								url += '&alg=' + alg;
+
+								if (width) {
+									url += '&width=' + width;
+								}
+							}
+						}
+						$.post(url, function(data) {
+							window.location = '/c3po/overview';
+						});
 					}
-					$.post(url, function(data) {
-						window.location = '/c3po/overview';
-					});
 				});
 		if (options != undefined && options['diagramType'] == 'Bubble') {
-			$.jqplot(i, [ d ], getBubbleChart(prettifyTitle(i)));
+			var plot = $.jqplot(i, [ d ], getBubbleChart(prettifyTitle(i)));
+
+			// create tooltip-bindings for bubble chart
+			if ($('#tooltip'+ i).size() == 0) {
+				$('<div style="position:absolute;z-index:99;font-size:12px;color:rgb(15%, 15%, 15%);padding:2px;background-color:rgba(95%,95%,95%,0.8)" id="tooltip'+ i +'"></div>').insertAfter('#'+ i);
+			}
+
+			$('#'+ i).bind('jqplotDataHighlight',
+				function (ev, seriesIndex, pointIndex, data, radius) {
+					var chart_left = $('#'+ i).offset().left,
+						chart_top = $('#'+ i).offset().top,
+						x = plot.axes.xaxis.u2p(data[0]),  // convert x axis unita to pixels
+						y = plot.axes.yaxis.u2p(data[1]);  // convert y axis units to pixels
+					var color = 'rgb(50%,50%,100%)';
+					$('#tooltip'+ i).css({left:chart_left+x+radius+5, top:chart_top+y});
+					$('#tooltip'+ i).html('<span style="font-size:14px;font-weight:bold;color:' + color + ';">' + data[3] + '</span><br />' + 'x: ' + data[0] + '<br />' + 'y: ' + data[1] + '<br />' + 'r: ' + data[2]);
+					$('#tooltip'+ i).show();
+				});
+
+			// Bind a function to the unhighlight event to clean up after highlighting.
+			$('#'+ i).bind('jqplotDataUnhighlight',
+				function (ev, seriesIndex, pointIndex, data) {
+					$('#tooltip'+ i).empty();
+					$('#tooltip'+ i).hide();
+				});
 		} else {
 			// bar chart is the default chart
 			$.jqplot(i, [ d ], getBarChart(prettifyTitle(i)));

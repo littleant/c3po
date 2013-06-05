@@ -352,7 +352,7 @@ public class FilterController extends Controller {
 		  }
 		  
 		  // remove filter
-		  remove(g1.getProperty());
+		  this.remove(g1.getProperty());
 	  }
 	  
 	  return g;

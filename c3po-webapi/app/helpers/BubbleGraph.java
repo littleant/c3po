@@ -56,7 +56,7 @@ public class BubbleGraph implements BasicGraph {
   }
 
   public void convertToPercentage() {
-	  // FIXME
+	  // TODO
 //    double sum = 0;
 //
 //    for (String s : values) {
@@ -74,7 +74,7 @@ public class BubbleGraph implements BasicGraph {
   }
 
   public void sort() {
-	  // FIXME
+	  // TODO
 //    List<String> k = new ArrayList<String>();
 //    List<String> v = new ArrayList<String>();
 //    int target = values.size();
